@@ -1,0 +1,21 @@
+[project]
+name = "elm-backend"
+version = "0.1.0"
+description = "ELM backend FastAPI service"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "alembic>=1.19.0",
+    "autopep8>=2.3.2",
+    "fastapi[all]>=0.141.1",
+    "gunicorn>=26.0.0",
+    "mysqlclient>=2.2.8",
+    "passlib[bcrypt]>=1.7.4",
+    "pydantic-settings>=2.14.2",
+    "python-jose[cryptography]>=3.5.0",
+    "pytz>=2026.3.post1",
+    "sqlalchemy>=2.0.51",
+    "wheel>=0.47.0",
+]
+
+[tool.uv]
+package = false
