@@ -25,11 +25,11 @@ def login(
     )
 
     if not user:
-        not_found("Invalid Credentials !!!")
+        return not_found("Invalid Credentials !!!")
 
     # if the passwords do not match
     if not verify(user_credentials.password, user.password):
-        unauthorized("Invalid Credentials !!!")
+        return unauthorized("Invalid Credentials !!!")
 
     # Checking if there is already a refresh token in the DB for that user.
     # If it exists, we remove it.
@@ -78,4 +78,4 @@ def refresh_user_access_token(
             "token_type": "Bearer",
         }
     else:
-        not_found("Invalid Refresh Token !!", {"WWW-Authenticate": "Bearer"})
+        return not_found("Invalid Refresh Token !!", {"WWW-Authenticate": "Bearer"})

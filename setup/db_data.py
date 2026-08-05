@@ -12,9 +12,9 @@ roles = [
 # Dev-only placeholder accounts. Passwords are hashed on insert (see db.py) —
 # rotate these before using outside a local/dev environment.
 users = [
-    ("Root", "root@elm.local", "changeme", [1], False, True),
-    ("System", "system@elm.local", "changeme", [2], False, False),
-    ("Admin", "admin@elm.local", "changeme", [3], False, True),
+    ("Root", "root@elm.dev", "changeme", [1], False, True),
+    ("System", "system@elm.dev", "changeme", [2], False, False),
+    ("Admin", "admin@elm.dev", "changeme", [3], False, True),
 ]
 
 # (endpoint_name, method, category, is_common, is_disabled)

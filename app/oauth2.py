@@ -9,9 +9,8 @@ from sqlalchemy.orm import Session
 from app import models, database
 from app.config import settings
 from app.schemas.auth import token as schema
-from app.schemas.auth.user import UserOut 
+from app.schemas.auth.user import UserOut
 from app.utils.fetch import get_roles_of_user
-from app.utils.http import unauthorized
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
@@ -60,22 +59,21 @@ def verify_access_token(
 
 
 def verify_refresh_token(token: str) -> schema.TokenData:
+    invalid_token_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid Refresh Token !!!",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
     try:
         payload = jwt.decode(token, REFRESH_TOKEN_SECRET_KEY, algorithms=[ALGORITHM])
         user_id = str(payload.get("user_id"))
 
         if user_id is None:
-            unauthorized(
-                message="Could not validate refresh token !!!",
-                response_headers={"WWW-Authenticate": "Bearer"},
-            )
+            raise invalid_token_exception
         token_data = schema.TokenData(user_id=user_id)
 
     except JWTError:
-        unauthorized(
-            message="Invalid Refresh Token !!!",
-            response_headers={"WWW-Authenticate": "Bearer"},
-        )
+        raise invalid_token_exception
 
     return token_data
 

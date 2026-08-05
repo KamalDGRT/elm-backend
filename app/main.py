@@ -2,6 +2,7 @@
 # How to run the code: uvicorn app.main:app --reload
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.routers.auth import role
 from app.routers.auth import user
@@ -15,6 +16,13 @@ app = FastAPI(
     version="0.1.0",
     contact={"name": "Kamal Sharma", "url": "https://github.com/KamalDGRT"},
     swagger_ui_parameters={"defaultModelsExpandDepth": -1}
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins_list,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # use the imported router in your project here:

@@ -22,7 +22,10 @@ REFRESH_TOKEN_SECRET_KEY=anotherRandomTextWithAlpaNumericChars
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=60
 DEPLOYMENT_ENV=dev
+CORS_ORIGINS=http://localhost:3000
 ```
+
+`CORS_ORIGINS` is comma-separated (e.g. `http://localhost:3000,https://elm.example.com`) — add the frontend's deployed origin here on the VPS too, or API calls from the browser will be silently blocked by CORS.
 
 - On macOS, `uv sync` may fail building `mysqlclient` with `Can not find valid pkg-config name` if the env vars below aren't set — see [macOS: MariaDB setup](#macos-mariadb-setup).
 
