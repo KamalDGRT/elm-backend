@@ -16,6 +16,7 @@ erDiagram
         int user_id PK
         string full_name
         string email
+        string user_name
         string password
         bool login_allowed
         bool is_deleted

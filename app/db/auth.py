@@ -27,6 +27,7 @@ class User(Base):
     user_id = Column(Integer, primary_key=True, index=True)
     full_name = Column(String(length=300), nullable=False)
     email = Column(String(length=200), nullable=False, unique=True)
+    user_name = Column(String(length=100), nullable=True, unique=True)
     password = Column(String(length=100), nullable=False)
     login_allowed = Column(Boolean, nullable=False, default=False)
     is_deleted = Column(Boolean, nullable=False, default=False)

@@ -21,6 +21,7 @@ Visual ER diagram: [DB_DIAGRAM.md](DB_DIAGRAM.md).
 | user_id | int, PK | |
 | full_name | varchar(300) | |
 | email | varchar(200) | unique |
+| user_name | varchar(100) | unique, nullable |
 | password | varchar(100) | hashed (bcrypt via passlib) |
 | login_allowed | bool | default false |
 | is_deleted | bool | default false, soft-delete flag |

@@ -22,13 +22,15 @@ def upgrade() -> None:
     sa.Column('user_id', sa.Integer(), nullable=False),
     sa.Column('full_name', sa.String(length=300), nullable=False),
     sa.Column('email', sa.String(length=200), nullable=False),
+    sa.Column('user_name', sa.String(length=100), nullable=True),
     sa.Column('password', sa.String(length=100), nullable=False),
     sa.Column('login_allowed', sa.Boolean(), nullable=False),
     sa.Column('is_deleted', sa.Boolean(), nullable=False),
     sa.Column('created_at', sa.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.PrimaryKeyConstraint('user_id'),
-    sa.UniqueConstraint('email')
+    sa.UniqueConstraint('email'),
+    sa.UniqueConstraint('user_name')
     )
     op.create_index(op.f('ix_user_user_id'), 'user', ['user_id'], unique=False)
     # ### end Alembic commands ###

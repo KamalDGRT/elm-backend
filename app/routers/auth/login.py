@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends
 from fastapi.security.oauth2 import OAuth2PasswordRequestForm
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 
@@ -20,7 +21,12 @@ def login(
 ):
     user = (
         db.query(models.User)
-        .filter(models.User.email == user_credentials.username)
+        .filter(
+            or_(
+                models.User.email == user_credentials.username,
+                models.User.user_name == user_credentials.username,
+            )
+        )
         .first()
     )
 

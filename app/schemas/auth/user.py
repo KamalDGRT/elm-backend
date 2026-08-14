@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 from pydantic import BaseModel, EmailStr
 
@@ -17,6 +17,7 @@ class UserRoleCreate(UserId):
 class UserCreate(BaseModel):
     full_name: str
     email: EmailStr
+    user_name: Optional[str] = None
     password: str
     roles: List[RoleId]
     login_allowed: bool
@@ -32,6 +33,7 @@ class UserOut(BaseModel):
     user_id: int
     full_name: str
     email: EmailStr
+    user_name: Optional[str] = None
     roles: List[RoleUpdate]
 
     class Config:
@@ -42,6 +44,7 @@ class User(BaseModel):
     user_id: int
     full_name: str
     email: EmailStr
+    user_name: Optional[str] = None
     created_at: datetime
     roles: List[RoleUpdate]
     login_allowed: bool

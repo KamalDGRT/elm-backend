@@ -25,14 +25,15 @@ def get_users(
     db: Session = Depends(get_db),
     current_user: schema.UserOut = Depends(get_current_user),
 ):
-    db_users = db.query(User.user_id, User.full_name, User.email).all()
+    db_users = db.query(User.user_id, User.full_name, User.email, User.user_name).all()
     users_json = list()
     for user in db_users:
-        # 0 -> user_id, 1 -> full_name, 2 -> email
+        # 0 -> user_id, 1 -> full_name, 2 -> email, 3 -> user_name
         user_data = dict()
         user_data["user_id"] = user[0]
         user_data["full_name"] = user[1]
         user_data["email"] = user[2]
+        user_data["user_name"] = user[3]
         roles_of_user = get_roles_of_user(db, user[0])
         user_data["roles"] = roles_of_user
 
@@ -62,9 +63,20 @@ def create_user(request_body: schema.UserCreate, db: Session = Depends(get_db)):
     if len(db_users) > 0:
         forbidden("Failed to create the User Already Exists !!!")
 
+    if request_body.user_name:
+        db_user_names = (
+            db.query(User)
+            .filter(User.user_name == request_body.user_name, User.is_deleted == 0)
+            .all()
+        )
+
+        if len(db_user_names) > 0:
+            forbidden("Failed to create the User Already Exists !!!")
+
     new_user = User(
         full_name=request_body.full_name,
         email=request_body.email,
+        user_name=request_body.user_name,
         password=request_body.password,
         login_allowed=request_body.login_allowed,
         is_deleted=request_body.is_deleted,
@@ -97,6 +109,7 @@ def create_user(request_body: schema.UserCreate, db: Session = Depends(get_db)):
         "user_id": new_user.user_id,
         "full_name": new_user.full_name,
         "email": new_user.email,
+        "user_name": new_user.user_name,
         "roles": new_roles,
     }
 
