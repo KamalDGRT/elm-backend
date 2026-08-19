@@ -10,6 +10,7 @@ from app import models, database
 from app.config import settings
 from app.schemas.auth import token as schema
 from app.schemas.auth.user import UserOut
+from app.utils.auth import can_manage_users, is_root
 from app.utils.fetch import get_roles_of_user
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
@@ -100,5 +101,33 @@ def get_current_user(
         user_id=user.user_id,
         full_name=user.full_name,
         email=user.email,
+        user_name=user.user_name,
         roles=get_roles_of_user(db, user.user_id)
     )
+
+
+def require_root(current_user: UserOut = Depends(get_current_user)) -> UserOut:
+    """
+    Gate for every router under app/routers/root/ — there's only one Root
+    account (see app/utils/auth.is_root), so this is the single place that
+    check happens.
+    """
+    if not is_root(current_user.user_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Root only.",
+        )
+    return current_user
+
+
+def require_root_or_admin(current_user: UserOut = Depends(get_current_user)) -> UserOut:
+    """
+    Gate for routers that Root and Admin both manage — unlike require_root,
+    this admits Admin too via can_manage_users().
+    """
+    if not can_manage_users(current_user.roles):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Root or Admin only.",
+        )
+    return current_user

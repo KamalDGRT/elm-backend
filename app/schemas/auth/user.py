@@ -54,6 +54,16 @@ class User(BaseModel):
         from_attributes = True
 
 
+class UpdateOwnPassword(BaseModel):
+    current_password: str
+    new_password: str
+
+
+class UpdateUserPassword(BaseModel):
+    user_id: int
+    new_password: str
+
+
 class UserSimple(BaseModel):
     full_name: str
 

@@ -1,3 +1,5 @@
+from typing import Optional
+
 from pydantic_settings import BaseSettings
 
 
@@ -13,6 +15,9 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int
     deployment_env: str
     cors_origins: str = "http://localhost:3000"
+    # user_id of the single Root account. Root is identified by this id, not
+    # by role name/id, since there's only ever one.
+    root_user_id: Optional[int] = None
 
     class Config:
         env_file = ".env"

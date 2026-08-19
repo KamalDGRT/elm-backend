@@ -3,14 +3,15 @@ from typing import List
 from fastapi import status, Depends, APIRouter
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.database import get_db
-from app.models import User, UserRole
+from app.models import UpdatePasswordLog, User, UserRole
 from app.oauth2 import get_current_user
 from app.schemas.auth import user as schema
-from app.utils.auth import hash
+from app.utils.auth import can_manage_users, hash, verify
 from app.utils.fetch import get_roles_of_user
 from app.utils.time import get_current_time
-from app.utils.http import forbidden, not_found
+from app.utils.http import forbidden, not_found, success_response
 
 router = APIRouter(prefix="/user", tags=["Users"])
 
@@ -25,7 +26,15 @@ def get_users(
     db: Session = Depends(get_db),
     current_user: schema.UserOut = Depends(get_current_user),
 ):
-    db_users = db.query(User.user_id, User.full_name, User.email, User.user_name).all()
+    if not can_manage_users(current_user.roles):
+        return forbidden("Only Root/Admin can list users.")
+
+    # Root never shows up in listings — it's the only account with full table
+    # access, so leaking it here is the one way this breaks.
+    query = db.query(User.user_id, User.full_name, User.email, User.user_name)
+    if settings.root_user_id is not None:
+        query = query.filter(User.user_id != settings.root_user_id)
+    db_users = query.all()
     users_json = list()
     for user in db_users:
         # 0 -> user_id, 1 -> full_name, 2 -> email, 3 -> user_name
@@ -120,12 +129,40 @@ def get_user_info(
     db: Session = Depends(get_db),
     current_user: schema.UserOut = Depends(get_current_user),
 ):
+    if not can_manage_users(current_user.roles) and current_user.user_id != request_body.user_id:
+        return forbidden("Only Root/Admin can look up another user.")
+
     user = db.query(User).filter(User.user_id == request_body.user_id).first()
     if not user:
-        not_found(f"User with id: { request_body.user_id } does not exist!")
+        return not_found(f"User with id: { request_body.user_id } does not exist!")
 
     user_roles = get_roles_of_user(db, request_body.user_id)
     user_data = user.__dict__
     user_data["roles"] = user_roles
 
     return user_data
+
+
+@router.post("/update-own-password", include_in_schema=False)
+def update_own_password(
+    request_body: schema.UpdateOwnPassword,
+    db: Session = Depends(get_db),
+    current_user: schema.UserOut = Depends(get_current_user),
+):
+    user = db.query(User).filter(User.user_id == current_user.user_id).first()
+
+    if not verify(request_body.current_password, user.password):
+        return forbidden("Current password is incorrect.")
+
+    user.password = hash(request_body.new_password)
+    user.updated_at = get_current_time()
+    db.add(
+        UpdatePasswordLog(
+            user_id=user.user_id,
+            updated_by=current_user.user_id,
+            updated_at=get_current_time(),
+        )
+    )
+    db.commit()
+
+    return success_response({"message": "Password updated successfully."})

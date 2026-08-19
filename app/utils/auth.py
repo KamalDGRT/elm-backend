@@ -3,11 +3,30 @@ from passlib.context import CryptContext
 
 from sqlalchemy.orm import Session
 
+from app.config import settings
+from app.constants import USER_MANAGEMENT_ROLE_NAMES
 from app.db.endpoints import Endpoint, EndpointRole
 from app.schemas.auth.role import RoleUpdate
 from app.utils.http import forbidden, not_found, unauthorized
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+def is_root(user_id: int) -> bool:
+    """
+    There's only ever one Root account, so it's identified by a fixed
+    user_id from config (root_user_id), not by role name/id.
+    """
+    return settings.root_user_id is not None and user_id == settings.root_user_id
+
+
+def can_manage_users(user_roles: List[RoleUpdate]) -> bool:
+    """
+    Root and Admin can see/manage other users (e.g. GET /user/all,
+    POST /user/info) — AppUsers can only see their own account, via
+    GET /user/me.
+    """
+    return any(role.role_name in USER_MANAGEMENT_ROLE_NAMES for role in user_roles)
 
 
 def hash(password: str):
