@@ -10,7 +10,6 @@ class Settings(BaseSettings):
     database_password: str
     database_name: str
     secret_key: str
-    refresh_token_secret_key: str
     # Fernet key (Fernet.generate_key()) used to reversibly encrypt the
     # plaintext password so Root/Admin can view it later.
     password_encryption_key: str

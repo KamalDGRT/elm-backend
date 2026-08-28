@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from fastapi import APIRouter, Depends
 from fastapi.security.oauth2 import OAuth2PasswordRequestForm
 from sqlalchemy import or_
@@ -48,7 +50,7 @@ def login(
 
     # Create Tokens to return them
     access_token = oauth2.create_access_token(data={"user_id": user.user_id})
-    refresh_token = oauth2.create_refresh_token(data={"user_id": user.user_id})
+    refresh_token = oauth2.create_refresh_token()
 
     # Saving Refresh Token in the Database
     refresh_token_dict = {
@@ -71,17 +73,33 @@ def login(
 def refresh_user_access_token(
     request_body: schema.RefreshTokenInput, db: Session = Depends(get_db)
 ):
-    # Checking if there is already a refresh token in the DB for that user.
-    refresh_token_check = db.query(models.RefreshToken).filter(
-        models.RefreshToken.refresh_token == request_body.refresh_token
+    refresh_token_row = (
+        db.query(models.RefreshToken)
+        .filter(models.RefreshToken.refresh_token == request_body.refresh_token)
+        .first()
     )
 
-    if refresh_token_check.first():
-        new_access_token = oauth2.get_new_access_token(request_body.refresh_token)
-        return {
-            "access_token": new_access_token,
-            "refresh_token": request_body.refresh_token,
-            "token_type": "Bearer",
-        }
-    else:
+    if not refresh_token_row:
         return not_found("Invalid Refresh Token !!", {"WWW-Authenticate": "Bearer"})
+
+    expires_at = refresh_token_row.created_at + timedelta(
+        minutes=oauth2.REFRESH_TOKEN_EXPIRE_MINUTES
+    )
+    # created_at comes back tz-naive from MySQL (it stores the wall-clock
+    # value get_current_time() wrote, not a tz-aware TIMESTAMP), so drop
+    # tzinfo here too before comparing.
+    if get_current_time().replace(tzinfo=None) > expires_at:
+        db.delete(refresh_token_row)
+        db.commit()
+        return unauthorized(
+            "Refresh Token has expired !!", {"WWW-Authenticate": "Bearer"}
+        )
+
+    new_access_token = oauth2.create_access_token(
+        data={"user_id": refresh_token_row.user_id}
+    )
+    return {
+        "access_token": new_access_token,
+        "refresh_token": request_body.refresh_token,
+        "token_type": "Bearer",
+    }

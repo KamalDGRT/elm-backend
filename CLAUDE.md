@@ -1,6 +1,6 @@
 # elm-backend
 
-FastAPI RBAC backend. MySQL via SQLAlchemy + Alembic. Auth: JWT access + refresh tokens (`app/oauth2.py`, `app/routers/auth`).
+FastAPI RBAC backend. MySQL via SQLAlchemy + Alembic. Auth: JWT access token + opaque UUID refresh token, looked up in the `refresh_token` table (`app/oauth2.py`, `app/routers/auth`).
 
 ## Tooling
 - Dependency manager: `uv` (not pip/virtualenv). `pyproject.toml` + `uv.lock` are the source of truth — `requirements.txt` is gone.

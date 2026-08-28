@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime, timedelta, timezone
 
 from fastapi import Depends, status, HTTPException
@@ -19,7 +20,6 @@ SECRET_KEY = settings.secret_key
 ALGORITHM = settings.algorithm
 ACCESS_TOKEN_EXPIRE_MINUTES = settings.access_token_expire_minutes
 REFRESH_TOKEN_EXPIRE_MINUTES = 60 * 24 * 30
-REFRESH_TOKEN_SECRET_KEY = settings.refresh_token_secret_key
 
 
 def create_access_token(data: dict):
@@ -31,15 +31,14 @@ def create_access_token(data: dict):
     return encoded_jwt
 
 
-def create_refresh_token(data: dict):
-    to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + timedelta(
-        minutes=REFRESH_TOKEN_EXPIRE_MINUTES
-    )
-    to_encode.update({"exp": expire})
-
-    encoded_jwt = jwt.encode(to_encode, REFRESH_TOKEN_SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+def create_refresh_token() -> str:
+    """
+    An opaque random id, not a JWT — it carries no payload, so it's looked
+    up by value in the `refresh_token` table (see
+    app/routers/auth/login.py) rather than decoded, and its expiry is
+    checked against that row's created_at there too.
+    """
+    return str(uuid.uuid4())
 
 
 def verify_access_token(
@@ -57,31 +56,6 @@ def verify_access_token(
         raise credentials_exception
 
     return token_data
-
-
-def verify_refresh_token(token: str) -> schema.TokenData:
-    invalid_token_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Invalid Refresh Token !!!",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    try:
-        payload = jwt.decode(token, REFRESH_TOKEN_SECRET_KEY, algorithms=[ALGORITHM])
-        user_id = str(payload.get("user_id"))
-
-        if user_id is None:
-            raise invalid_token_exception
-        token_data = schema.TokenData(user_id=user_id)
-
-    except JWTError:
-        raise invalid_token_exception
-
-    return token_data
-
-
-def get_new_access_token(token: str):
-    token_data = verify_refresh_token(token)
-    return create_access_token(token_data.model_dump())
 
 
 def get_current_user(
