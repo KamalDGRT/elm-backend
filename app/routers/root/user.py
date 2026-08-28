@@ -23,7 +23,7 @@ def update_user_password(
     """
     user = db.query(User).filter(User.user_id == request_body.user_id).first()
     if not user:
-        return not_found(f"User with id: { request_body.user_id } does not exist!")
+        not_found(f"User with id: { request_body.user_id } does not exist!")
 
     user.password = hash(request_body.new_password)
     user.password_plain = encrypt_password(request_body.new_password)

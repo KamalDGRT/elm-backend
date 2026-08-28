@@ -2,13 +2,21 @@
 # How to run the code: uvicorn app.main:app --reload
 
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
 from app.config import settings
 from app.routers.auth import role
 from app.routers.auth import user
 from app.routers.auth import login
 from app.routers.auth import signup
 from app.routers.root import user as root_user
+from app.utils.http import (
+    http_exception_handler,
+    unhandled_exception_handler,
+    validation_exception_handler,
+)
 
 
 app = FastAPI(
@@ -25,6 +33,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# One error shape for everything: our own raised HTTPExceptions, FastAPI's
+# built-ins (401 from OAuth2PasswordBearer, 404 for unmatched routes, ...),
+# request validation, and anything unhandled. See app/utils/http.py.
+app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(Exception, unhandled_exception_handler)
 
 # use the imported router in your project here:
 # app.include_router(module1.router)

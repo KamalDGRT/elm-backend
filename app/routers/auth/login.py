@@ -33,11 +33,11 @@ def login(
     )
 
     if not user:
-        return not_found("Invalid Credentials !!!")
+        not_found("Invalid Credentials !!!")
 
     # if the passwords do not match
     if not verify(user_credentials.password, user.password):
-        return unauthorized("Invalid Credentials !!!")
+        unauthorized("Invalid Credentials !!!")
 
     # Checking if there is already a refresh token in the DB for that user.
     # If it exists, we remove it.
@@ -80,7 +80,7 @@ def refresh_user_access_token(
     )
 
     if not refresh_token_row:
-        return not_found("Invalid Refresh Token !!", {"WWW-Authenticate": "Bearer"})
+        not_found("Invalid Refresh Token !!", {"WWW-Authenticate": "Bearer"})
 
     expires_at = refresh_token_row.created_at + timedelta(
         minutes=oauth2.REFRESH_TOKEN_EXPIRE_MINUTES
@@ -91,7 +91,7 @@ def refresh_user_access_token(
     if get_current_time().replace(tzinfo=None) > expires_at:
         db.delete(refresh_token_row)
         db.commit()
-        return unauthorized(
+        unauthorized(
             "Refresh Token has expired !!", {"WWW-Authenticate": "Bearer"}
         )
 

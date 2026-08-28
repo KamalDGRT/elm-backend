@@ -42,7 +42,7 @@ def validate_email_input(
         .all()
     )
     if len(db_users) > 0:
-        return forbidden(
+        forbidden(
             {"valid": False, "message": "You already have an account. Please login!"}
         )
     else:

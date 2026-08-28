@@ -27,7 +27,7 @@ def get_users(
     current_user: schema.UserOut = Depends(get_current_user),
 ):
     if not can_manage_users(current_user.roles):
-        return forbidden("Only Root/Admin can list users.")
+        forbidden("Only Root/Admin can list users.")
 
     # Root never shows up in listings — it's the only account with full table
     # access, so leaking it here is the one way this breaks.
@@ -132,11 +132,11 @@ def get_user_info(
     current_user: schema.UserOut = Depends(get_current_user),
 ):
     if not can_manage_users(current_user.roles) and current_user.user_id != request_body.user_id:
-        return forbidden("Only Root/Admin can look up another user.")
+        forbidden("Only Root/Admin can look up another user.")
 
     user = db.query(User).filter(User.user_id == request_body.user_id).first()
     if not user:
-        return not_found(f"User with id: { request_body.user_id } does not exist!")
+        not_found(f"User with id: { request_body.user_id } does not exist!")
 
     user_roles = get_roles_of_user(db, request_body.user_id)
     user_data = user.__dict__
@@ -154,7 +154,7 @@ def update_own_password(
     user = db.query(User).filter(User.user_id == current_user.user_id).first()
 
     if not verify(request_body.current_password, user.password):
-        return forbidden("Current password is incorrect.")
+        forbidden("Current password is incorrect.")
 
     user.password = hash(request_body.new_password)
     user.password_plain = encrypt_password(request_body.new_password)
@@ -183,12 +183,12 @@ def get_user_password(
     credentials, e.g. guiding a child through login.
     """
     if not can_manage_users(current_user.roles):
-        return forbidden("Only Root/Admin can view another user's password.")
+        forbidden("Only Root/Admin can view another user's password.")
 
     user = db.query(User).filter(User.user_id == request_body.user_id).first()
     if not user:
-        return not_found(f"User with id: { request_body.user_id } does not exist!")
+        not_found(f"User with id: { request_body.user_id } does not exist!")
     if not user.password_plain:
-        return not_found("No recoverable password stored for this user.")
+        not_found("No recoverable password stored for this user.")
 
     return {"user_id": user.user_id, "password": decrypt_password(user.password_plain)}

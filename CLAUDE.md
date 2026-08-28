@@ -17,6 +17,15 @@ FastAPI RBAC backend. MySQL via SQLAlchemy + Alembic. Auth: JWT access token + o
 - `app/utils/` — shared helpers (auth, http, file, time).
 - `alembic/` — migrations. Run `uv run alembic revision --autogenerate -m "..."` after model changes, then `uv run alembic upgrade head`.
 
+## Errors
+Every error response (ours, FastAPI's, validation, unhandled) comes out shaped the same:
+`{"errors": [{"code", "title", "detail", "status", "instance", "meta"?}]}` — see the handlers in
+`app/utils/http.py`, wired up in `app/main.py`. Raise, don't return: call `not_found("message")`,
+`forbidden(...)`, `unauthorized(...)`, etc. from `app/utils/http.py` — they raise `HTTPException`
+internally, so the call interrupts the request whether or not you `return` it (no more silently
+falling through to a 200 if you forget the `return`). Pass `headers={"WWW-Authenticate": "Bearer"}`
+for auth challenges, or `code="SOME_CODE"` to override the default status-derived code.
+
 ## RBAC model
 `role` ←→ `user` via `user_role` (many-to-many). `update_password_log` and `refresh_token` are auxiliary to `user`. Full column list in [DB_SCHEMA.md](DB_SCHEMA.md).
 

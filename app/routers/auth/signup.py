@@ -49,7 +49,7 @@ def signup(request_body: schema.SignupRequest, db: Session = Depends(get_db)):
         .first()
     )
     if existing_user:
-        return forbidden({"message": "That username is already taken."})
+        forbidden({"message": "That username is already taken."})
 
     plain_password = generate_password()
 
