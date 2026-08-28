@@ -24,7 +24,9 @@ Every error response (ours, FastAPI's, validation, unhandled) comes out shaped t
 `forbidden(...)`, `unauthorized(...)`, etc. from `app/utils/http.py` — they raise `HTTPException`
 internally, so the call interrupts the request whether or not you `return` it (no more silently
 falling through to a 200 if you forget the `return`). Pass `headers={"WWW-Authenticate": "Bearer"}`
-for auth challenges, or `code="SOME_CODE"` to override the default status-derived code.
+for auth challenges, or `code="SOME_CODE"` to override the default status-derived code. Pass a
+list instead of a single string/dict to send several errors in one response — each item becomes
+its own entry in `errors` and can override its own `"status"`/`"code"`.
 
 ## RBAC model
 `role` ←→ `user` via `user_role` (many-to-many). `update_password_log` and `refresh_token` are auxiliary to `user`. Full column list in [DB_SCHEMA.md](DB_SCHEMA.md).
