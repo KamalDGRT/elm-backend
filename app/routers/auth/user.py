@@ -8,7 +8,7 @@ from app.database import get_db
 from app.models import UpdatePasswordLog, User, UserRole
 from app.oauth2 import get_current_user
 from app.schemas.auth import user as schema
-from app.utils.auth import can_manage_users, hash, verify
+from app.utils.auth import can_manage_users, decrypt_password, encrypt_password, hash, verify
 from app.utils.fetch import get_roles_of_user
 from app.utils.time import get_current_time
 from app.utils.http import forbidden, not_found, success_response
@@ -60,17 +60,18 @@ def create_user(request_body: schema.UserCreate, db: Session = Depends(get_db)):
     """
     Inserting a new user into the database
     """
-    hashed_password = hash(request_body.password)
-    request_body.password = hashed_password
+    encrypted_password = encrypt_password(request_body.password)
+    request_body.password = hash(request_body.password)
 
-    db_users = (
-        db.query(User)
-        .filter(User.email == request_body.email, User.is_deleted == 0)
-        .all()
-    )
+    if request_body.email:
+        db_users = (
+            db.query(User)
+            .filter(User.email == request_body.email, User.is_deleted == 0)
+            .all()
+        )
 
-    if len(db_users) > 0:
-        forbidden("Failed to create the User Already Exists !!!")
+        if len(db_users) > 0:
+            forbidden("Failed to create the User Already Exists !!!")
 
     if request_body.user_name:
         db_user_names = (
@@ -87,6 +88,7 @@ def create_user(request_body: schema.UserCreate, db: Session = Depends(get_db)):
         email=request_body.email,
         user_name=request_body.user_name,
         password=request_body.password,
+        password_plain=encrypted_password,
         login_allowed=request_body.login_allowed,
         is_deleted=request_body.is_deleted,
         created_at=get_current_time(),
@@ -155,6 +157,7 @@ def update_own_password(
         return forbidden("Current password is incorrect.")
 
     user.password = hash(request_body.new_password)
+    user.password_plain = encrypt_password(request_body.new_password)
     user.updated_at = get_current_time()
     db.add(
         UpdatePasswordLog(
@@ -166,3 +169,26 @@ def update_own_password(
     db.commit()
 
     return success_response({"message": "Password updated successfully."})
+
+
+@router.post("/password", response_model=schema.UserPassword, include_in_schema=False)
+def get_user_password(
+    request_body: schema.UserId,
+    db: Session = Depends(get_db),
+    current_user: schema.UserOut = Depends(get_current_user),
+):
+    """
+    Lets Root/Admin read back a user's actual password (not just reset it)
+    — needed for users who can't be expected to manage/recall their own
+    credentials, e.g. guiding a child through login.
+    """
+    if not can_manage_users(current_user.roles):
+        return forbidden("Only Root/Admin can view another user's password.")
+
+    user = db.query(User).filter(User.user_id == request_body.user_id).first()
+    if not user:
+        return not_found(f"User with id: { request_body.user_id } does not exist!")
+    if not user.password_plain:
+        return not_found("No recoverable password stored for this user.")
+
+    return {"user_id": user.user_id, "password": decrypt_password(user.password_plain)}

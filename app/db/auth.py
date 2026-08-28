@@ -26,9 +26,15 @@ class User(Base):
 
     user_id = Column(Integer, primary_key=True, index=True)
     full_name = Column(String(length=300), nullable=False)
-    email = Column(String(length=200), nullable=False, unique=True)
+    # Optional: self-signup users (see app/routers/auth/signup.py) have no
+    # email, only a generated user_name.
+    email = Column(String(length=200), nullable=True, unique=True)
     user_name = Column(String(length=100), nullable=True, unique=True)
     password = Column(String(length=100), nullable=False)
+    # Fernet-encrypted copy of the plaintext password, for Root/Admin to
+    # view via POST /user/password. Null for accounts created before this
+    # existed, until their password is next changed.
+    password_plain = Column(String(length=255), nullable=True)
     login_allowed = Column(Boolean, nullable=False, default=False)
     is_deleted = Column(Boolean, nullable=False, default=False)
 

@@ -16,7 +16,7 @@ class UserRoleCreate(UserId):
 
 class UserCreate(BaseModel):
     full_name: str
-    email: EmailStr
+    email: Optional[EmailStr] = None
     user_name: Optional[str] = None
     password: str
     roles: List[RoleId]
@@ -32,7 +32,7 @@ class UserLogin(BaseModel):
 class UserOut(BaseModel):
     user_id: int
     full_name: str
-    email: EmailStr
+    email: Optional[EmailStr] = None
     user_name: Optional[str] = None
     roles: List[RoleUpdate]
 
@@ -43,7 +43,7 @@ class UserOut(BaseModel):
 class User(BaseModel):
     user_id: int
     full_name: str
-    email: EmailStr
+    email: Optional[EmailStr] = None
     user_name: Optional[str] = None
     created_at: datetime
     roles: List[RoleUpdate]
@@ -69,3 +69,27 @@ class UserSimple(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class UsernameWords(BaseModel):
+    adjectives: List[str]
+    fruits_and_vegetables: List[str]
+
+
+class SignupRequest(BaseModel):
+    full_name: str
+    user_name: str
+
+
+class SignupResponse(BaseModel):
+    user_id: int
+    full_name: str
+    user_name: str
+    # Shown once at signup so it can be written down; recoverable later via
+    # POST /user/password (Root/Admin only).
+    password: str
+
+
+class UserPassword(BaseModel):
+    user_id: int
+    password: str

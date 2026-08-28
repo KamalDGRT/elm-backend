@@ -5,7 +5,7 @@ from app.database import get_db
 from app.models import UpdatePasswordLog, User
 from app.oauth2 import require_root
 from app.schemas.auth import user as schema
-from app.utils.auth import hash
+from app.utils.auth import encrypt_password, hash
 from app.utils.time import get_current_time
 from app.utils.http import not_found, success_response
 
@@ -26,6 +26,7 @@ def update_user_password(
         return not_found(f"User with id: { request_body.user_id } does not exist!")
 
     user.password = hash(request_body.new_password)
+    user.password_plain = encrypt_password(request_body.new_password)
     user.updated_at = get_current_time()
     db.add(
         UpdatePasswordLog(
