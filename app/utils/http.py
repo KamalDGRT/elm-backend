@@ -2,9 +2,17 @@
 # handlers at the bottom of this file, wired up in app/main.py, which turn
 # any HTTPException (ours or FastAPI's own) into the shared envelope:
 #   {"errors": [{"code", "title", "detail", "status", "instance", "meta"?}]}
+#
+# To send several errors in one response, pass a list to any helper below,
+# e.g. bad_request([{"message": "email invalid"}, {"message": "password too
+# short", "code": "PASSWORD_TOO_SHORT"}]) — each item becomes its own entry
+# in "errors"; the response's own HTTP status stays whatever the helper
+# raises (400 here), but an item can override just its own "status" too.
 import logging
 from http import HTTPStatus
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, List, Optional, Union
+
+ErrorDetail = Union[str, Dict[str, Any]]
 
 from fastapi import status
 from fastapi.exceptions import HTTPException, RequestValidationError
@@ -29,17 +37,23 @@ def success_response(
 
 def _raise(
     status_code: int,
-    detail: Union[str, Dict[str, Any]],
+    detail: Union[ErrorDetail, List[ErrorDetail]],
     headers: Optional[Dict[str, str]] = None,
     code: Optional[str] = None,
 ):
     """
-    detail can be a plain message, or a dict with "message" plus any extra
-    fields the caller wants surfaced (e.g. validate.py's `valid: False`) —
-    those extras land in the error object's "meta". `code` is optional; the
-    handler falls back to the HTTP status name (e.g. "NOT_FOUND").
+    detail can be:
+    - a plain message
+    - a dict with "message" plus any extra fields the caller wants
+      surfaced (e.g. validate.py's `valid: False`) — those extras land in
+      the error object's "meta"; a "status"/"code" key overrides this
+      call's status_code/code for just that item
+    - a list of either of the above, to send several errors at once —
+      each becomes its own entry in "errors"
+    `code` is optional; the handler falls back to the HTTP status name
+    (e.g. "NOT_FOUND") for any item that doesn't specify its own.
     """
-    if code:
+    if code and not isinstance(detail, list):
         if isinstance(detail, dict):
             detail = {**detail, "code": code}
         else:
@@ -48,7 +62,7 @@ def _raise(
 
 
 def bad_request(
-    detail: Union[str, Dict[str, Any]],
+    detail: Union[ErrorDetail, List[ErrorDetail]],
     headers: Optional[Dict[str, str]] = None,
     code: Optional[str] = None,
 ):
@@ -56,7 +70,7 @@ def bad_request(
 
 
 def unauthorized(
-    detail: Union[str, Dict[str, Any]],
+    detail: Union[ErrorDetail, List[ErrorDetail]],
     headers: Optional[Dict[str, str]] = None,
     code: Optional[str] = None,
 ):
@@ -64,7 +78,7 @@ def unauthorized(
 
 
 def forbidden(
-    detail: Union[str, Dict[str, Any]],
+    detail: Union[ErrorDetail, List[ErrorDetail]],
     headers: Optional[Dict[str, str]] = None,
     code: Optional[str] = None,
 ):
@@ -72,7 +86,7 @@ def forbidden(
 
 
 def not_found(
-    detail: Union[str, Dict[str, Any]],
+    detail: Union[ErrorDetail, List[ErrorDetail]],
     headers: Optional[Dict[str, str]] = None,
     code: Optional[str] = None,
 ):
@@ -80,7 +94,7 @@ def not_found(
 
 
 def invalid_file_type(
-    detail: Union[str, Dict[str, Any]],
+    detail: Union[ErrorDetail, List[ErrorDetail]],
     headers: Optional[Dict[str, str]] = None,
     code: Optional[str] = None,
 ):
@@ -88,7 +102,7 @@ def invalid_file_type(
 
 
 def unprocessable_entity(
-    detail: Union[str, Dict[str, Any]],
+    detail: Union[ErrorDetail, List[ErrorDetail]],
     headers: Optional[Dict[str, str]] = None,
     code: Optional[str] = None,
 ):
@@ -96,7 +110,7 @@ def unprocessable_entity(
 
 
 def internal_server_error(
-    detail: Union[str, Dict[str, Any]],
+    detail: Union[ErrorDetail, List[ErrorDetail]],
     headers: Optional[Dict[str, str]] = None,
     code: Optional[str] = None,
 ):
@@ -104,19 +118,22 @@ def internal_server_error(
 
 
 def error_uploading_file(
-    detail: Union[str, Dict[str, Any]],
+    detail: Union[ErrorDetail, List[ErrorDetail]],
     headers: Optional[Dict[str, str]] = None,
     code: Optional[str] = None,
 ):
     _raise(status.HTTP_500_INTERNAL_SERVER_ERROR, detail, headers, code)
 
 
-def _error_object(request: Request, status_code: int, detail, code: Optional[str] = None) -> Dict[str, Any]:
+def _error_object(
+    request: Request, status_code: int, detail: ErrorDetail, code: Optional[str] = None
+) -> Dict[str, Any]:
     meta = None
     if isinstance(detail, dict):
         message = detail.get("message", "")
+        status_code = detail.get("status", status_code)
         code = detail.get("code", code)
-        meta = {k: v for k, v in detail.items() if k not in ("message", "code")}
+        meta = {k: v for k, v in detail.items() if k not in ("message", "code", "status")}
     else:
         message = detail
 
@@ -132,11 +149,22 @@ def _error_object(request: Request, status_code: int, detail, code: Optional[str
     return error
 
 
+def _error_objects(
+    request: Request,
+    status_code: int,
+    detail: Union[ErrorDetail, List[ErrorDetail]],
+    code: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    if isinstance(detail, list):
+        return [_error_object(request, status_code, item, code) for item in detail]
+    return [_error_object(request, status_code, detail, code)]
+
+
 async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
-    error = _error_object(request, exc.status_code, exc.detail)
+    errors = _error_objects(request, exc.status_code, exc.detail)
     return JSONResponse(
         status_code=exc.status_code,
-        content=jsonable_encoder({"errors": [error]}),
+        content=jsonable_encoder({"errors": errors}),
         headers=exc.headers,
     )
 
