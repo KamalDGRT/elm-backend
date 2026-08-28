@@ -1,6 +1,6 @@
 # DB Schema
 
-Source of truth is `app/db/auth.py` and `app/db/endpoints.py` — this doc is a snapshot for quick reference; regenerate/update it by hand whenever those model files change. Matches the RBAC design sheet.
+Source of truth is `app/db/auth.py` — this doc is a snapshot for quick reference; regenerate/update it by hand whenever that model file changes. Matches the RBAC design sheet.
 
 Visual ER diagram: [DB_DIAGRAM.md](DB_DIAGRAM.md).
 
@@ -53,45 +53,18 @@ Visual ER diagram: [DB_DIAGRAM.md](DB_DIAGRAM.md).
 | updated_at | timestamptz | |
 | updated_by | int, FK → user.user_id | who made the change, ON DELETE CASCADE |
 
-## Endpoint usage permission (`app/db/endpoints.py`)
-
-### `endpoint`
-| column | type | notes |
-|---|---|---|
-| endpoint_id | int, PK | |
-| endpoint_name | varchar(256) | unique |
-| is_common | bool | accessible regardless of role, if true |
-| is_disabled | bool | kill switch for an endpoint |
-| method | varchar(10) | HTTP verb |
-| category | text | |
-| created_at | timestamptz | |
-| created_by | int, FK → user.user_id | ON DELETE CASCADE |
-| updated_at | timestamptz | |
-| updated_by | int, FK → user.user_id | ON DELETE CASCADE |
-
-### `endpoint_role` (many-to-many: endpoint ↔ role)
-| column | type | notes |
-|---|---|---|
-| endpoint_role_id | int, PK | |
-| endpoint_id | int, FK → endpoint.endpoint_id | ON DELETE CASCADE |
-| role_id | int, FK → role.role_id | ON DELETE CASCADE |
-| created_at | timestamptz | |
-
 ## Relationships at a glance
 ```
 role ──user_role── user ──refresh_token
-role ──endpoint_role── endpoint
 user ──update_password_log (self-referencing: user_id + updated_by, both → user)
 ```
-
-A user's effective permissions = union of all endpoints reachable through every role in `user_role` for that user, via `endpoint_role`. `endpoint.is_common` bypasses this check entirely; `endpoint.is_disabled` blocks it entirely regardless of role.
 
 ## Content model (draft — not yet implemented)
 
 Planning pass from `elm-plan` product docs ([raw feature notes](../elm-plan/raw.md), [Data Model](../elm-plan/06-data-model.md), [Activity Types](../elm-plan/05-activity-types.md), [My Projects](../elm-plan/08-my-projects.md), [Project Templates](../elm-plan/13-project-templates.md), [Backend RBAC](../elm-plan/07-backend-rbac.md)). Not modeled in `app/db/` yet — this is a table proposal, not a snapshot.
 
 Design notes:
-- Role stays per-`group`, not a flat `user.role` — reuses the existing `role`/`user_role` shape but scoped through `group_membership` instead (per `elm-plan`'s "role is per-Group" decision). The auth `role`/`user_role`/`endpoint_role` tables above are unaffected — they gate API-endpoint access; `group_membership` gates content access.
+- Role stays per-`group`, not a flat `user.role` — reuses the existing `role`/`user_role` shape but scoped through `group_membership` instead (per `elm-plan`'s "role is per-Group" decision). The auth `role`/`user_role` tables above are unaffected; `group_membership` gates content access.
 - One generic `resource_access_override` table, not one override table per resource type — covers the Discord-style "direct grant/deny always wins over role" model for activity types, activity versions, project templates, projects, AND modules, per `elm-plan`'s explicit "generic `resource_type` + `resource_id`, not one table per resource" decision.
 - `resource_type` is its own lookup table (FK'd by `resource_type_id`), not a hardcoded enum — adding a new overridable resource later (e.g. `project_folder`) is a row insert, no migration.
 - `activity_type` is versioned (`activity_version`); `project_template` is deliberately flat/unversioned — confirmed from the mocks, not an oversight.

@@ -4,4 +4,3 @@ from app.database import Base
 
 # Every model represents a table in our database.
 from app.db.auth import *
-from app.db.endpoints import *

@@ -7,7 +7,6 @@ from app.config import settings
 from app.routers.auth import role
 from app.routers.auth import user
 from app.routers.auth import login
-from app.routers.auth import endpoints
 from app.routers.auth import signup
 from app.routers.root import user as root_user
 
@@ -32,7 +31,6 @@ app.add_middleware(
 app.include_router(role.router)
 app.include_router(user.router)
 app.include_router(login.router)
-app.include_router(endpoints.router)
 app.include_router(signup.router)
 app.include_router(root_user.router)
 

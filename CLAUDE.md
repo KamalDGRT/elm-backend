@@ -10,7 +10,7 @@ FastAPI RBAC backend. MySQL via SQLAlchemy + Alembic. Auth: JWT access token + o
 - See [Setup.md](Setup.md) for full local setup, [DB_SCHEMA.md](DB_SCHEMA.md) for the current table structure, [DB_DIAGRAM.md](DB_DIAGRAM.md) for the visual ER diagram.
 
 ## Structure
-- `app/db/` — SQLAlchemy models, one file per domain (`auth.py`, `endpoints.py`). `app/models.py` just re-exports them.
+- `app/db/` — SQLAlchemy models (`auth.py`). `app/models.py` just re-exports them.
 - `app/schemas/` — Pydantic request/response schemas, mirrors `app/db/` grouping.
 - `app/routers/` — FastAPI routers. `root/` holds Root-only routers, one file per domain (currently just `root/user.py`) — every route in every file there is gated by `Depends(require_root)`, both at the router level and as each route's `current_user` param.
 - `app/constants.py` — role-name constants (`ROOT_ROLE_NAME`, `SYSTEM_ROLE_NAME`, `ADMIN_ROLE_NAME`, `APP_USER_ROLE_NAME`, `USER_MANAGEMENT_ROLE_NAMES`). Import these rather than hardcoding role-name strings.
@@ -18,7 +18,7 @@ FastAPI RBAC backend. MySQL via SQLAlchemy + Alembic. Auth: JWT access token + o
 - `alembic/` — migrations. Run `uv run alembic revision --autogenerate -m "..."` after model changes, then `uv run alembic upgrade head`.
 
 ## RBAC model
-`role` ←→ `user` via `user_role` (many-to-many). `endpoint` ←→ `role` via `endpoint_role` controls which roles can hit which endpoint. `update_password_log` and `refresh_token` are auxiliary to `user`. Full column list in [DB_SCHEMA.md](DB_SCHEMA.md).
+`role` ←→ `user` via `user_role` (many-to-many). `update_password_log` and `refresh_token` are auxiliary to `user`. Full column list in [DB_SCHEMA.md](DB_SCHEMA.md).
 
 There's only one Root account: `app/utils/auth.is_root()` checks a user_id against the `ROOT_USER_ID` env var (`app/config.py`), not a role; `app/oauth2.require_root()` wraps that check as a dependency for everything under `app/routers/root/`. `app/oauth2.require_root_or_admin()` is the equivalent gate for routes Root and Admin both manage.
 
